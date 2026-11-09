@@ -1,0 +1,18 @@
+{
+  "name": "training-room-scheduler",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c yellow,cyan \"npm run dev -w @scheduler/server\" \"npm run dev -w @scheduler/client\"",
+    "test": "npm run test -w @scheduler/shared && npm run test -w @scheduler/server && npm run test -w @scheduler/client",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "concurrently": "^9.1.2"
+  }
+}
