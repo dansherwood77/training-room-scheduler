@@ -162,6 +162,46 @@ describe("bookings", () => {
     expect(again.body.message).toBe("That booking no longer exists.");
   });
 
+  it("leaves attendees optional and refuses a count above the room", async () => {
+    const room = await makeRoom("Tide Room", 8, ROOM_COLORS[3].hex);
+    const open = await book(room.id, "2026-11-08T09:00", "2026-11-08T10:00");
+    expect(open.status).toBe(201);
+    expect(open.body.attendees).toBeNull();
+
+    const fits = await request(app).post("/bookings").send({
+      roomId: room.id,
+      title: "Skills Lab",
+      instructor: "Jordan Hale",
+      attendees: 8,
+      startMs: ms("2026-11-08T10:00"),
+      endMs: ms("2026-11-08T11:00"),
+    });
+    expect(fits.status).toBe(201);
+    expect(fits.body.attendees).toBe(8);
+
+    const over = await request(app).post("/bookings").send({
+      roomId: room.id,
+      title: "Crowd Drill",
+      instructor: "Ada Lovelace",
+      attendees: 9,
+      startMs: ms("2026-11-08T11:00"),
+      endMs: ms("2026-11-08T12:00"),
+    });
+    expect(over.status).toBe(400);
+    expect(over.body.message).toBe("Tide Room holds 8 people. 9 people are more than that room can take.");
+
+    const raised = await request(app).patch(`/bookings/${fits.body.id}`).send({
+      roomId: room.id,
+      title: "Skills Lab",
+      instructor: "Jordan Hale",
+      attendees: 12,
+      startMs: ms("2026-11-08T10:00"),
+      endMs: ms("2026-11-08T11:00"),
+    });
+    expect(raised.status).toBe(400);
+    expect(raised.body.message).toContain("Tide Room holds 8 people");
+  });
+
   it("refuses a booking for a room that is gone", async () => {
     const response = await book("missing", "2026-11-08T09:00", "2026-11-08T10:00");
     expect(response.status).toBe(404);

@@ -149,6 +149,7 @@ export function ScheduleApp() {
             roomId: booking.roomId,
             title: booking.title,
             instructor: booking.instructor,
+            attendees: booking.attendees,
             startMs,
             endMs,
           }),
@@ -358,6 +359,7 @@ export function ScheduleApp() {
                     roomId: bookingDialog.booking.roomId,
                     title: bookingDialog.booking.title,
                     instructor: bookingDialog.booking.instructor,
+                    attendees: bookingDialog.booking.attendees,
                     startMs: bookingDialog.booking.startMs,
                     endMs: bookingDialog.booking.endMs,
                   }

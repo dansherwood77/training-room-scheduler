@@ -6,6 +6,7 @@ import {
   cancelBookingMessage,
   cancelRoomMessage,
   endIsAfterStart,
+  overCapacityMessage,
   overlapMessage,
   rangesOverlap,
 } from "./index";
@@ -57,6 +58,12 @@ describe("refusal copy", () => {
       "Sun Room is already booked then, for Morning Flow with Ana Ruiz, 9:00 AM to 10:30 AM.",
     );
     expect(END_BEFORE_START).toMatch(/after the start/);
+    expect(overCapacityMessage("Tide Room", 8, 9)).toBe(
+      "Tide Room holds 8 people. 9 people are more than that room can take.",
+    );
+    expect(overCapacityMessage("The Loft", 1, 2)).toBe(
+      "The Loft holds 1 person. 2 people are more than that room can take.",
+    );
   });
 
   it("states what a cancel will free or remove", () => {

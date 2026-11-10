@@ -15,6 +15,15 @@ export function duplicateRoomMessage(name: string): string {
   return `There's already a room named ${name}.`;
 }
 
+function people(count: number): string {
+  return count === 1 ? "1 person" : `${count} people`;
+}
+
+export function overCapacityMessage(roomName: string, capacity: number, attendees: number): string {
+  const verb = attendees === 1 ? "is" : "are";
+  return `${roomName} holds ${people(capacity)}. ${people(attendees)} ${verb} more than that room can take.`;
+}
+
 export function cancelBookingMessage(title: string, roomName: string, when: string): string {
   return `Cancel ${title} in ${roomName}? The room is free from ${when}.`;
 }

@@ -7,6 +7,7 @@ import {
   duplicateRoomMessage,
   endIsAfterStart,
   formatWhen,
+  overCapacityMessage,
   overlapMessage,
   type Booking,
   type Room,
@@ -36,6 +37,7 @@ type BookingRecord = {
   room_color: string;
   title: string;
   instructor: string;
+  attendees: number | null;
   start_ms: number;
   end_ms: number;
 };
@@ -58,6 +60,7 @@ function toBooking(row: BookingRecord): Booking {
     roomColor: row.room_color,
     title: row.title,
     instructor: row.instructor,
+    attendees: row.attendees,
     startMs: row.start_ms,
     endMs: row.end_ms,
   };
@@ -71,7 +74,7 @@ const roomSelect = `
 
 const bookingSelect = `
   SELECT b.id, b.room_id, r.name AS room_name, r.color AS room_color,
-    b.title, b.instructor, b.start_ms, b.end_ms
+    b.title, b.instructor, b.attendees, b.start_ms, b.end_ms
   FROM bookings b
   JOIN rooms r ON r.id = b.room_id
 `;
@@ -157,7 +160,7 @@ function findConflict(
   // Half-open intervals: a booking that ends at 11:00 does not block one that starts at 11:00.
   return db
     .prepare(
-      `SELECT b.id, b.room_id, r.name AS room_name, r.color AS room_color, b.title, b.instructor, b.start_ms, b.end_ms
+      `SELECT b.id, b.room_id, r.name AS room_name, r.color AS room_color, b.title, b.instructor, b.attendees, b.start_ms, b.end_ms
        FROM bookings b
        JOIN rooms r ON r.id = b.room_id
        WHERE b.room_id = @roomId
@@ -175,15 +178,27 @@ function findConflict(
     }) as BookingRecord | undefined;
 }
 
+type BookingInput = {
+  roomId: string;
+  title: string;
+  instructor: string;
+  attendees?: number | null;
+  startMs: number;
+  endMs: number;
+};
+
 function validateBooking(
   db: DB,
-  input: { roomId: string; title: string; instructor: string; startMs: number; endMs: number; excludeId?: string },
+  input: BookingInput & { excludeId?: string },
 ): Failure | { ok: true; roomName: string; roomColor: string } {
   if (!endIsAfterStart(input.startMs, input.endMs)) return fail(400, END_BEFORE_START);
-  const room = db.prepare("SELECT name, color FROM rooms WHERE id = ?").get(input.roomId) as
-    | { name: string; color: string }
+  const room = db.prepare("SELECT name, color, capacity FROM rooms WHERE id = ?").get(input.roomId) as
+    | { name: string; color: string; capacity: number }
     | undefined;
   if (!room) return fail(404, ROOM_MISSING);
+  if (input.attendees != null && input.attendees > room.capacity) {
+    return fail(400, overCapacityMessage(room.name, room.capacity, input.attendees));
+  }
   const conflict = findConflict(db, input);
   if (conflict) {
     return fail(
@@ -194,21 +209,20 @@ function validateBooking(
   return { ok: true, roomName: room.name, roomColor: room.color };
 }
 
-export function createBooking(
-  db: DB,
-  input: { roomId: string; title: string; instructor: string; startMs: number; endMs: number },
-): Result<Booking> {
+export function createBooking(db: DB, input: BookingInput): Result<Booking> {
   const check = validateBooking(db, input);
   if (!check.ok) return check;
   const id = randomUUID();
+  const attendees = input.attendees ?? null;
   db.prepare(
-    `INSERT INTO bookings (id, room_id, title, instructor, start_ms, end_ms)
-     VALUES (@id, @roomId, @title, @instructor, @startMs, @endMs)`,
+    `INSERT INTO bookings (id, room_id, title, instructor, attendees, start_ms, end_ms)
+     VALUES (@id, @roomId, @title, @instructor, @attendees, @startMs, @endMs)`,
   ).run({
     id,
     roomId: input.roomId,
     title: input.title.trim(),
     instructor: input.instructor.trim(),
+    attendees,
     startMs: input.startMs,
     endMs: input.endMs,
   });
@@ -221,30 +235,32 @@ export function createBooking(
       roomColor: check.roomColor,
       title: input.title.trim(),
       instructor: input.instructor.trim(),
+      attendees,
       startMs: input.startMs,
       endMs: input.endMs,
     },
   };
 }
 
-export function updateBooking(
-  db: DB,
-  id: string,
-  input: { roomId: string; title: string; instructor: string; startMs: number; endMs: number },
-): Result<Booking> {
-  const current = db.prepare("SELECT id FROM bookings WHERE id = ?").get(id) as { id: string } | undefined;
+export function updateBooking(db: DB, id: string, input: BookingInput): Result<Booking> {
+  const current = db.prepare("SELECT attendees FROM bookings WHERE id = ?").get(id) as
+    | { attendees: number | null }
+    | undefined;
   if (!current) return fail(404, BOOKING_MISSING);
-  const check = validateBooking(db, { ...input, excludeId: id });
+  const attendees = input.attendees === undefined ? current.attendees : input.attendees;
+  const check = validateBooking(db, { ...input, attendees, excludeId: id });
   if (!check.ok) return check;
   db.prepare(
     `UPDATE bookings
-     SET room_id = @roomId, title = @title, instructor = @instructor, start_ms = @startMs, end_ms = @endMs
+     SET room_id = @roomId, title = @title, instructor = @instructor, attendees = @attendees,
+         start_ms = @startMs, end_ms = @endMs
      WHERE id = @id`,
   ).run({
     id,
     roomId: input.roomId,
     title: input.title.trim(),
     instructor: input.instructor.trim(),
+    attendees,
     startMs: input.startMs,
     endMs: input.endMs,
   });
@@ -257,6 +273,7 @@ export function updateBooking(
       roomColor: check.roomColor,
       title: input.title.trim(),
       instructor: input.instructor.trim(),
+      attendees,
       startMs: input.startMs,
       endMs: input.endMs,
     },

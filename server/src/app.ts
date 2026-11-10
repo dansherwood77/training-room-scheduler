@@ -27,6 +27,13 @@ const bookingBody = z.object({
   roomId: z.string().trim().min(1, "Choose a room."),
   title: z.string().trim().min(1, "Add a session title.").max(120, "That title is too long."),
   instructor: z.string().trim().min(1, "Add an instructor.").max(80, "That name is too long."),
+  attendees: z
+    .number({ invalid_type_error: "Attendees has to be a whole number." })
+    .int("Attendees has to be a whole number.")
+    .min(1, "Attendees has to be at least 1.")
+    .max(1000, "Attendees has to be 1000 or less.")
+    .nullable()
+    .optional(),
   startMs: z.number().int(),
   endMs: z.number().int(),
 });

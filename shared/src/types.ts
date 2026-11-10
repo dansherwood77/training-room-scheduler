@@ -13,6 +13,7 @@ export type Booking = {
   roomColor: string;
   title: string;
   instructor: string;
+  attendees: number | null;
   startMs: number;
   endMs: number;
 };

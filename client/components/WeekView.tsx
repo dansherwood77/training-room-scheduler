@@ -147,7 +147,7 @@ export function WeekView({
     if (!column) return;
     const scrollerRect = scroller.getBoundingClientRect();
     const columnRect = column.getBoundingClientRect();
-    scroller.scrollLeft += columnRect.left - scrollerRect.left - 68;
+    scroller.scrollLeft += columnRect.left - scrollerRect.left;
   }, [days]);
 
   const marks = days[0] != null ? hoursInDay(days[0]).filter((mark) => mark.hour % 3 === 0) : [];
@@ -155,6 +155,20 @@ export function WeekView({
 
   return (
     <div className="period">
+      <div className="week-frame">
+      <div className="week-times" aria-hidden="true">
+        <div className="week-head-spacer" />
+        <div className="hour-gutter">
+          {marks.map((mark) => {
+            const y = `${fractionOfDay(mark.ms, days[0]) * 100}%`;
+            return (
+              <span key={mark.hour} className={mark.hour === 0 ? "hour-label first" : "hour-label"} style={{ top: y }}>
+                {mark.label}
+              </span>
+            );
+          })}
+        </div>
+      </div>
       <div
       className="week-scroll"
       ref={scrollRef}
@@ -261,7 +275,6 @@ export function WeekView({
       }}
     >
       <div className="week-head">
-        <div />
         {days.map((day) => {
           const date = new Date(day);
           const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "America/Los_Angeles" }).format(date);
@@ -282,16 +295,6 @@ export function WeekView({
         })}
       </div>
       <div className="week-body">
-        <div className="hour-gutter" aria-hidden="true">
-          {marks.map((mark) => {
-            const y = `${fractionOfDay(mark.ms, days[0]) * 100}%`;
-            return (
-              <span key={mark.hour} className={mark.hour === 0 ? "hour-label first" : "hour-label"} style={{ top: y }}>
-                {mark.label}
-              </span>
-            );
-          })}
-        </div>
         {days.map((day, index) => {
           const dayBookings = shown.flatMap((booking) => {
             const parts = clipToDays(booking.startMs, booking.endMs, [day]);
@@ -338,6 +341,7 @@ export function WeekView({
                     aria-label={`${item.booking.title}, ${item.booking.instructor}, ${formatSpan(item.booking.startMs, item.booking.endMs)}, ${item.booking.roomName}`}
                     onPointerDown={(event) => {
                       event.stopPropagation();
+                      event.preventDefault();
                       if (event.button !== 0) return;
                       const mapped = pointToMs(event.clientX, event.clientY);
                       moveRef.current = {
@@ -366,6 +370,7 @@ export function WeekView({
                         aria-label={`Change the start of ${item.booking.title}`}
                         onPointerDown={(event) => {
                           event.stopPropagation();
+                          event.preventDefault();
                           if (event.button !== 0) return;
                           resizeRef.current = {
                             booking: item.booking,
@@ -391,6 +396,7 @@ export function WeekView({
                         aria-label={`Change the end of ${item.booking.title}`}
                         onPointerDown={(event) => {
                           event.stopPropagation();
+                          event.preventDefault();
                           if (event.button !== 0) return;
                           resizeRef.current = {
                             booking: item.booking,
@@ -454,6 +460,7 @@ export function WeekView({
           );
         })}
       </div>
+    </div>
     </div>
     </div>
   );

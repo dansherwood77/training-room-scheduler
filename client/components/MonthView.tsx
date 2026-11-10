@@ -200,6 +200,7 @@ export function MonthView({
                   aria-label={`${booking.title}, ${booking.instructor}, ${formatSpan(booking.startMs, booking.endMs)}, ${booking.roomName}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
+                    event.preventDefault();
                     if (event.button !== 0) return;
                     moveRef.current = {
                       booking,

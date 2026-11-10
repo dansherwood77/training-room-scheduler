@@ -6,6 +6,7 @@ import {
   END_BEFORE_START,
   cancelBookingMessage,
   formatWhen,
+  overCapacityMessage,
   fromDateAndTime,
   toDateInput,
   toTimeInput,
@@ -19,6 +20,7 @@ type Initial = {
   roomId: string;
   title: string;
   instructor: string;
+  attendees?: number | null;
   startMs: number;
   endMs: number;
 };
@@ -43,6 +45,7 @@ export function BookingSheet({
   const [roomId, setRoomId] = useState(initial.roomId);
   const [title, setTitle] = useState(initial.title);
   const [instructor, setInstructor] = useState(initial.instructor);
+  const [attendees, setAttendees] = useState(initial.attendees == null ? "" : String(initial.attendees));
   const [startDate, setStartDate] = useState(toDateInput(initial.startMs));
   const [startTime, setStartTime] = useState(toTimeInput(initial.startMs));
   const [endDate, setEndDate] = useState(toDateInput(initial.endMs));
@@ -55,6 +58,9 @@ export function BookingSheet({
   const endMs = fromDateAndTime(endDate, endTime);
   const summary = startMs != null && endMs != null && endMs > startMs ? formatWhen(startMs, endMs) : null;
   const room = rooms.find((item) => item.id === roomId);
+  const coming = attendees === "" ? null : Number(attendees);
+  const capacityError =
+    coming != null && room && coming > room.capacity ? overCapacityMessage(room.name, room.capacity, coming) : null;
   const savedRoom = rooms.find((item) => item.id === initial.roomId) ?? room;
   const confirmText = savedRoom
     ? cancelBookingMessage(initial.title.trim() || title.trim() || "this session", savedRoom.name, formatWhen(initial.startMs, initial.endMs))
@@ -86,10 +92,23 @@ export function BookingSheet({
       setError(END_BEFORE_START);
       return;
     }
+    if (attendees !== "" && (!Number.isInteger(coming) || (coming ?? 0) < 1)) {
+      setError("Attendees has to be at least 1.");
+      return;
+    }
+    if (coming != null && coming > 1000) {
+      setError("Attendees has to be 1000 or less.");
+      return;
+    }
+    if (capacityError) {
+      setError(capacityError);
+      return;
+    }
     const body = {
       roomId,
       title: title.trim(),
       instructor: instructor.trim(),
+      attendees: coming,
       startMs,
       endMs,
     };
@@ -157,11 +176,30 @@ export function BookingSheet({
               <input value={instructor} onChange={(event) => setInstructor(event.target.value)} autoComplete="name" />
             </label>
             <label className="field">
+              <span>Attendees</span>
+              <input
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={room ? `Optional, up to ${room.capacity}` : "Optional"}
+                value={attendees}
+                onChange={(event) => {
+                  setAttendees(event.target.value.replace(/\D/g, ""));
+                  setError(null);
+                }}
+              />
+            </label>
+            <label className="field">
               <span className="field-label">
                 Room
                 {room && <i className="room-swatch" style={{ background: room.color }} aria-hidden="true" />}
               </span>
-              <select value={roomId} onChange={(event) => setRoomId(event.target.value)}>
+              <select
+                value={roomId}
+                onChange={(event) => {
+                  setRoomId(event.target.value);
+                  setError(null);
+                }}
+              >
                 <option value="">Choose a room</option>
                 {rooms.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -189,7 +227,7 @@ export function BookingSheet({
               </label>
             </div>
             <AnimatePresence>
-              {error && (
+              {(capacityError ?? error) && (
                 <motion.p
                   className="refusal"
                   role="alert"
@@ -197,7 +235,7 @@ export function BookingSheet({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                 >
-                  {error}
+                  {capacityError ?? error}
                 </motion.p>
               )}
             </AnimatePresence>

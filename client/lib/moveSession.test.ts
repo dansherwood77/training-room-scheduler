@@ -17,6 +17,7 @@ function booking(start: string, end: string): Booking {
     roomColor: "#F0C84A",
     title: "Morning Flow",
     instructor: "Ana Ruiz",
+    attendees: null,
     startMs: ms(start),
     endMs: ms(end),
   };

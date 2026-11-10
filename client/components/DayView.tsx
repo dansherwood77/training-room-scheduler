@@ -272,6 +272,7 @@ export function DayView({
               aria-label={`${item.booking.title}, ${item.booking.instructor}, ${formatSpan(item.booking.startMs, item.booking.endMs)}, ${item.booking.roomName}`}
               onPointerDown={(event) => {
                 event.stopPropagation();
+                event.preventDefault();
                 if (event.button !== 0) return;
                 const mapped = pointToMs(event.clientY);
                 moveRef.current = {
@@ -300,6 +301,7 @@ export function DayView({
                   aria-label={`Change the start of ${item.booking.title}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
+                    event.preventDefault();
                     if (event.button !== 0) return;
                     resizeRef.current = {
                       booking: item.booking,
@@ -325,6 +327,7 @@ export function DayView({
                   aria-label={`Change the end of ${item.booking.title}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
+                    event.preventDefault();
                     if (event.button !== 0) return;
                     resizeRef.current = {
                       booking: item.booking,

@@ -61,6 +61,19 @@ test("books a free hour, refuses an overlap, and allows the next hour", async ({
   await expect(page.getByRole("button", { name: /After Drill, Ada Lovelace/ })).toBeVisible();
 });
 
+test("refuses a session with more people than the room holds", async ({ page }) => {
+  await openNewSession(page, 0.82);
+  await fillSession(page, "Crowd Drill", "18:00", "19:00");
+  const sheet = page.getByRole("dialog", { name: "New session" });
+  await sheet.getByRole("textbox", { name: "Attendees" }).fill("19");
+  await expect(sheet.getByRole("alert")).toHaveText(
+    "Sun Room holds 18 people. 19 people are more than that room can take.",
+  );
+  await sheet.getByRole("textbox", { name: "Attendees" }).fill("18");
+  await expect(sheet.getByRole("alert")).toBeHidden();
+  await page.getByRole("button", { name: "Close" }).click();
+});
+
 test("adds a room and cancels it after a confirm", async ({ page }) => {
   await page.getByRole("button", { name: "+ Add a room" }).click();
   await expect(page.getByRole("heading", { name: "New room" })).toBeVisible();

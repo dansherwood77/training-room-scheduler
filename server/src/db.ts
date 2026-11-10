@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   instructor TEXT NOT NULL,
+  attendees INTEGER,
   start_ms INTEGER NOT NULL,
   end_ms INTEGER NOT NULL,
   CHECK (end_ms > start_ms)
@@ -38,6 +39,10 @@ export function openDatabase(filename: string): DB {
   const columns = db.prepare("PRAGMA table_info(rooms)").all() as { name: string }[];
   if (!columns.some((column) => column.name === "color")) {
     db.exec("ALTER TABLE rooms ADD COLUMN color TEXT NOT NULL DEFAULT '#F0C84A'");
+  }
+  const bookingColumns = db.prepare("PRAGMA table_info(bookings)").all() as { name: string }[];
+  if (!bookingColumns.some((column) => column.name === "attendees")) {
+    db.exec("ALTER TABLE bookings ADD COLUMN attendees INTEGER");
   }
   return db;
 }
